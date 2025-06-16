@@ -1,8 +1,0 @@
-{
-  "hostname": "myhome",
-  "token": "your_api_token_from_dashboard",
-  "server_url": "http://3.72.176.165:3000",
-  "ip_detection_service": "https://api.ipify.org",
-  "log_file": "/var/log/ddns-updater.log",
-  "check_interval": 300
-}
