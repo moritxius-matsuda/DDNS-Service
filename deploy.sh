@@ -33,6 +33,12 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+# Prüfe ob ddns-server/.env existiert
+if [ ! -f ddns-server/.env ]; then
+    log_warn "ddns-server/.env not found, copying from root .env"
+    cp .env ddns-server/.env
+fi
+
 # Lade Umgebungsvariablen
 source .env
 
