@@ -1,68 +1,245 @@
-# DDNS Service for dm1lx.de
+# DM1LX DDNS Service
 
-This project provides a DDNS (Dynamic DNS) service where hostnames under the `*.dm1lx.de` domain can be dynamically mapped to IP addresses using Redis for storage.
+Ein vollständiger Dynamic DNS Service für die Domain `dm1lx.de`.
 
-## Features
+## Übersicht
 
-- Dynamic DNS updates via web interface
-- Clerk authentication for secure access
-- API endpoint for router updates
-- Redis storage for hostname-IP mappings
-- Modern web interface with Next.js
+Dieses System besteht aus mehreren Komponenten:
+
+1. **Frontend (Next.js + Vercel + Clerk)** - Web-Interface zur Verwaltung der Hostnames
+2. **DNS-Server** - Beantwortet DNS-Anfragen für `*.dm1lx.de`
+3. **API** - RESTful API für Updates von Routern und Skripten
+4. **Python/Shell-Skripte** - Automatische IP-Aktualisierung
 
 ## Setup
 
-### Frontend Setup
+### 1. Abhängigkeiten installieren
 
-1. Install dependencies:
 ```bash
-cd frontend
 npm install
 ```
 
-2. Create a `.env.local` file in the frontend directory with:
-```
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZG0xbHguZGUk
-CLERK_SECRET_KEY=sk_live_5lgucoOVTBC3XMbPkH18AqnmIqKuBNhNGoFT0YwZ40
+### 2. Umgebungsvariablen konfigurieren
+
+Kopieren Sie `.env.local.example` zu `.env.local` und füllen Sie die Werte aus:
+
+```bash
+cp .env.local.example .env.local
 ```
 
-3. Run the development server:
+### 3. Frontend starten (Development)
+
 ```bash
 npm run dev
 ```
 
-### Router Update Script
-
-The router update script is located at `update_ddns.py`. You can use it to update your DDNS record from your router:
+### 4. DNS-Server starten
 
 ```bash
-python update_ddns.py --hostname yourdevice.dm1lx.de --ip YOUR_IP_ADDRESS --api-key YOUR_API_KEY
+npm run dns-server
 ```
 
-## Usage
+## DNS-Konfiguration
 
-1. Sign in to the web interface using your Clerk credentials
-2. Navigate to the dashboard
-3. Enter your desired hostname (must end with .dm1lx.de) and IP address
-4. Click "Update DDNS Record" to save the mapping
+Für die Domain `dm1lx.de` müssen folgende DNS-Einträge gesetzt werden:
 
-## API
-
-The API endpoint for programmatic updates is available at:
-
-`POST /api/update`
-
-Request body:
-```json
-{
-  "hostname": "yourdevice.dm1lx.de",
-  "ipAddress": "192.168.1.100"
-}
+```
+*.dm1lx.de    A    3.72.176.165
 ```
 
-## Security
+Der Server auf `3.72.176.165` läuft dann den DNS-Server, der die Subdomains zu den richtigen IP-Adressen auflöst.
 
-- All updates require authentication
-- Hostnames must end with .dm1lx.de
-- IP addresses are validated
-- Redis connection is secured with credentials
+## Verwendung
+
+### Web-Interface
+
+1. Besuchen Sie die Website
+2. Melden Sie sich mit Clerk an
+3. Verwalten Sie Ihre Hostnames über das Dashboard
+4. Kopieren Sie Ihren API-Schlüssel für automatische Updates
+
+### Python-Skript
+
+```bash
+# Installation der Abhängigkeiten
+pip install requests
+
+# Hostname aktualisieren
+python scripts/update_ddns.py --hostname meinhost --api-key your-api-key
+
+# Mit spezifischer IP
+python scripts/update_ddns.py --hostname meinhost --api-key your-api-key --ip 192.168.1.100
+
+# Mit JSON-Output
+python scripts/update_ddns.py --hostname meinhost --api-key your-api-key --json
+```
+
+### Shell-Skript (für Router)
+
+```bash
+# Ausführbar machen
+chmod +x scripts/update_ddns.sh
+
+# Hostname aktualisieren
+./scripts/update_ddns.sh meinhost your-api-key
+
+# Mit spezifischer IP
+./scripts/update_ddns.sh meinhost your-api-key 192.168.1.100
+```
+
+### API-Aufrufe
+
+#### Hostname aktualisieren (POST)
+
+```bash
+curl -X POST https://yourdomain.com/api/ddns/update \
+  -H "Content-Type: application/json" \
+  -d '{
+    "hostname": "meinhost",
+    "apiKey": "your-api-key",
+    "ip": "192.168.1.100"
+  }'
+```
+
+#### Hostname aktualisieren (GET - für einfache Router)
+
+```bash
+curl "https://yourdomain.com/api/ddns/update?hostname=meinhost&apiKey=your-api-key&ip=192.168.1.100"
+```
+
+#### Hostname auflösen
+
+```bash
+curl "https://yourdomain.com/api/ddns/resolve?hostname=meinhost"
+```
+
+## Deployment
+
+### Frontend (Vercel)
+
+1. Repository zu Vercel verbinden
+2. Umgebungsvariablen in Vercel konfigurieren
+3. Deploy
+
+### DNS-Server
+
+Der DNS-Server muss auf dem Server mit der IP `3.72.176.165` laufen:
+
+```bash
+# Als Service installieren (systemd)
+sudo cp dns-server.service /etc/systemd/system/
+sudo systemctl enable dns-server
+sudo systemctl start dns-server
+```
+
+### Systemd Service Datei
+
+Erstellen Sie `/etc/systemd/system/dns-server.service`:
+
+```ini
+[Unit]
+Description=DM1LX DDNS Server
+After=network.target
+
+[Service]
+Type=simple
+User=ddns
+WorkingDirectory=/path/to/dm1lx-ddns
+ExecStart=/usr/bin/node dns-server/server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## Router-Konfiguration
+
+### FritzBox
+
+1. Internet → Freigaben → DynDNS
+2. DynDNS-Anbieter: Benutzerdefiniert
+3. Update-URL: `https://yourdomain.com/api/ddns/update?hostname=<domain>&apiKey=<pass>&ip=<ipaddr>`
+4. Domainname: Ihr Hostname (ohne .dm1lx.de)
+5. Benutzername: (leer lassen)
+6. Kennwort: Ihr API-Schlüssel
+
+### OpenWrt
+
+Installieren Sie das `ddns-scripts` Paket und konfigurieren Sie:
+
+```bash
+# /etc/config/ddns
+config service 'dm1lx'
+    option enabled '1'
+    option service_name 'dm1lx.de'
+    option domain 'meinhost'
+    option username ''
+    option password 'your-api-key'
+    option update_url 'https://yourdomain.com/api/ddns/update?hostname=[DOMAIN]&apiKey=[PASSWORD]&ip=[IP]'
+    option check_interval '10'
+    option check_unit 'minutes'
+```
+
+### pfSense
+
+1. Services → Dynamic DNS
+2. Service Type: Custom
+3. Hostname: Ihr Hostname
+4. Username: (leer)
+5. Password: Ihr API-Schlüssel
+6. Update URL: `https://yourdomain.com/api/ddns/update?hostname=%h&apiKey=%p&ip=%i`
+
+## Cron-Jobs
+
+Für automatische Updates können Sie Cron-Jobs einrichten:
+
+```bash
+# Alle 5 Minuten aktualisieren
+*/5 * * * * /path/to/scripts/update_ddns.sh meinhost your-api-key
+
+# Oder mit Python-Skript
+*/5 * * * * /usr/bin/python3 /path/to/scripts/update_ddns.py --hostname meinhost --api-key your-api-key --quiet
+```
+
+## Sicherheit
+
+- API-Schlüssel werden sicher in Redis gespeichert
+- Rate-Limiting auf API-Endpunkten
+- Validierung aller Eingaben
+- HTTPS-only für alle API-Aufrufe
+
+## Monitoring
+
+Der DNS-Server loggt alle Anfragen. Überwachen Sie:
+
+- DNS-Server-Status
+- Redis-Verbindung
+- API-Response-Zeiten
+- Fehlerhafte Update-Versuche
+
+## Troubleshooting
+
+### DNS-Auflösung funktioniert nicht
+
+1. Prüfen Sie, ob der DNS-Server läuft: `sudo systemctl status dns-server`
+2. Testen Sie DNS-Anfragen: `nslookup meinhost.dm1lx.de 3.72.176.165`
+3. Prüfen Sie die Redis-Verbindung
+
+### API-Updates schlagen fehl
+
+1. Prüfen Sie den API-Schlüssel
+2. Validieren Sie das Hostname-Format
+3. Prüfen Sie die IP-Adresse
+4. Schauen Sie in die Server-Logs
+
+### Hostname wird nicht gefunden
+
+1. Prüfen Sie, ob der Hostname in Redis existiert
+2. Stellen Sie sicher, dass der Hostname dem Benutzer gehört
+3. Prüfen Sie die Redis-Daten: `redis-cli HGETALL ddns:hostname`
+
+## Support
+
+Bei Problemen oder Fragen erstellen Sie ein Issue im Repository.
