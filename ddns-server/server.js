@@ -70,8 +70,8 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use('/api', apiRoutes);
-app.use('/', ddnsRoutes);
+app.use('/api', apiRoutes(redis));
+app.use('/', ddnsRoutes(redis));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken');
-const { redis } = require('../server');
 const logger = require('../utils/logger');
 
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = (redis) => async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     

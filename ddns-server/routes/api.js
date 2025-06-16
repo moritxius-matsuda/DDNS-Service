@@ -1,12 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { redis } = require('../server');
 const logger = require('../utils/logger');
 const authMiddleware = require('../middleware/auth');
 const Joi = require('joi');
 
-const router = express.Router();
+module.exports = (redis) => {
+  const router = express.Router();
 
 // Validation schemas
 const createHostnameSchema = Joi.object({
@@ -74,7 +74,7 @@ router.post('/tokens', async (req, res) => {
 });
 
 // Get user's hostnames
-router.get('/hostnames', authMiddleware, async (req, res) => {
+router.get('/hostnames', authMiddleware(redis), async (req, res) => {
   try {
     const userId = req.user.userId;
     
@@ -99,7 +99,7 @@ router.get('/hostnames', authMiddleware, async (req, res) => {
 });
 
 // Create new hostname
-router.post('/hostnames', authMiddleware, async (req, res) => {
+router.post('/hostnames', authMiddleware(redis), async (req, res) => {
   try {
     const { error, value } = createHostnameSchema.validate(req.body);
     if (error) {
@@ -163,7 +163,7 @@ router.post('/hostnames', authMiddleware, async (req, res) => {
 });
 
 // Update hostname
-router.put('/hostnames/:hostname', authMiddleware, async (req, res) => {
+router.put('/hostnames/:hostname', authMiddleware(redis), async (req, res) => {
   try {
     const { error, value } = updateHostnameSchema.validate(req.body);
     if (error) {
@@ -221,7 +221,7 @@ router.put('/hostnames/:hostname', authMiddleware, async (req, res) => {
 });
 
 // Delete hostname
-router.delete('/hostnames/:hostname', authMiddleware, async (req, res) => {
+router.delete('/hostnames/:hostname', authMiddleware(redis), async (req, res) => {
   try {
     const hostname = req.params.hostname;
     const userId = req.user.userId;
@@ -253,7 +253,7 @@ router.delete('/hostnames/:hostname', authMiddleware, async (req, res) => {
 });
 
 // Get hostname logs
-router.get('/hostnames/:hostname/logs', authMiddleware, async (req, res) => {
+router.get('/hostnames/:hostname/logs', authMiddleware(redis), async (req, res) => {
   try {
     const hostname = req.params.hostname;
     const userId = req.user.userId;
@@ -282,7 +282,7 @@ router.get('/hostnames/:hostname/logs', authMiddleware, async (req, res) => {
 });
 
 // Revoke API token
-router.delete('/tokens/:tokenId', authMiddleware, async (req, res) => {
+router.delete('/tokens/:tokenId', authMiddleware(redis), async (req, res) => {
   try {
     const tokenId = req.params.tokenId;
     const userId = req.user.userId;
@@ -311,4 +311,5 @@ router.delete('/tokens/:tokenId', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+  return router;
+};

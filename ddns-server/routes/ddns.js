@@ -1,10 +1,10 @@
 const express = require('express');
-const { redis } = require('../server');
 const logger = require('../utils/logger');
 const authMiddleware = require('../middleware/auth');
 const Joi = require('joi');
 
-const router = express.Router();
+module.exports = (redis) => {
+  const router = express.Router();
 
 // Validation schemas
 const updateIpSchema = Joi.object({
@@ -13,7 +13,7 @@ const updateIpSchema = Joi.object({
 });
 
 // DDNS Update endpoint - used by routers/scripts
-router.post('/update', authMiddleware, async (req, res) => {
+router.post('/update', authMiddleware(redis), async (req, res) => {
   try {
     const { error, value } = updateIpSchema.validate(req.body);
     if (error) {
@@ -105,7 +105,7 @@ router.get('/:hostname', async (req, res) => {
 });
 
 // Get hostname info (for debugging)
-router.get('/info/:hostname', authMiddleware, async (req, res) => {
+router.get('/info/:hostname', authMiddleware(redis), async (req, res) => {
   try {
     const hostname = req.params.hostname;
     const userId = req.user.userId;
@@ -128,4 +128,5 @@ router.get('/info/:hostname', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+  return router;
+};
