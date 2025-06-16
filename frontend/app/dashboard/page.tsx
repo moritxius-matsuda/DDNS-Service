@@ -1,3 +1,5 @@
+"use client"
+
 import { SignedIn, UserButton } from "@clerk/nextjs";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
