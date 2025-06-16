@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
-import Redis from "redis";
+import { createClient } from "redis";
 
-const redis = Redis.createClient({
-  url: "redis://default:qUDOoKa6WE6zgtiEU59VHsnGxxX3dJPC@redis-19438.c300.eu-central-1-1.ec2.redns.redis-cloud.com:19438"
+// Create Redis client only on server side
+const redisClient = createClient({
+  url: process.env.REDIS_URL || "redis://default:qUDOoKa6WE6zgtiEU59VHsnGxxX3dJPC@redis-19438.c300.eu-central-1-1.ec2.redns.redis-cloud.com:19438"
 });
 
-redis.on('error', (err: Error) => {
+redisClient.on('error', (err: Error) => {
   console.error('Redis Client Error', err);
 });
 
-redis.connect().catch(console.error);
+// Connect to Redis when the module loads
+redisClient.connect().catch(console.error);
 
 export async function POST(request: Request) {
   try {
@@ -31,8 +33,8 @@ export async function POST(request: Request) {
     }
 
     // Store in Redis
-    await redis.set(hostname, ipAddress);
-    await redis.set(`${hostname}:last_update`, Date.now().toString());
+    await redisClient.set(hostname, ipAddress);
+    await redisClient.set(`${hostname}:last_update`, Date.now().toString());
 
     return NextResponse.json({
       success: true,
