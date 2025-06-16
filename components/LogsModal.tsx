@@ -7,6 +7,7 @@ interface Log {
   hostname: string
   oldIp?: string
   newIp?: string
+  ip?: string
   action?: string
   timestamp: string
   updatedBy: string
